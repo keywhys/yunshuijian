@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>云水间 · 听音</title>
+<link rel="icon" href="/static/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<!-- 壁纸 -->
+<div class="wallpaper" aria-hidden="true">
+  <img src="/static/wallpaper.png" alt="">
+  <div class="wp-tint"></div>
+</div>
+<canvas id="snow" aria-hidden="true"></canvas>
+<div class="offline-bar" id="offlineBar">与本地服务断开，请关闭窗口后重新打开</div>
+
+<header class="topbar">
+  <div class="brand">
+    <svg class="seal" viewBox="0 0 64 64" aria-label="云水间">
+      <circle cx="32" cy="32" r="30.5" fill="none" stroke="currentColor" stroke-width="1.1" opacity=".45"/>
+      <circle cx="32" cy="32" r="26.5" fill="none" stroke="currentColor" stroke-width=".7" opacity=".28"/>
+      <path d="M41.6 15.2a17.6 17.6 0 1 0 0 33.6 15 15 0 0 1 0-33.6z" fill="currentColor"/>
+      <path d="M27.5 37.6c-2.4-.6-4.2-2.3-4.2-4.3 0-2.5 2.6-4.5 5.8-4.5s5.8 2 5.8 4.5c0 1.9-1.7 3.6-4 4.2"
+            fill="none" stroke="#f7f2e6" stroke-width="1.5" stroke-linecap="round" opacity=".92"/>
+      <circle cx="27.2" cy="40.4" r="1.7" fill="#f7f2e6" opacity=".92"/>
+      <circle cx="38.4" cy="38.9" r="1.4" fill="#f7f2e6" opacity=".75"/>
+    </svg>
+    <div class="brand-name">
+      <h1>云水间</h1>
+      <span>听&nbsp;音</span>
+    </div>
+  </div>
+
+  <div class="searchbox">
+    <svg class="ico" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L21 21"/></svg>
+    <input id="q" type="text" placeholder="寻一曲⋯　回车可探云端高质音源" autocomplete="off" spellcheck="false">
+    <button id="btnSearch" title="寻音">寻</button>
+  </div>
+</header>
+
+<main class="stage" id="stage">
+  <nav class="sidebar">
+    <button class="nav-item active" data-view="like">
+      <span class="nav-mark">喜</span>
+      <span class="nav-label">我的喜欢</span>
+      <span class="nav-count" id="cntLike">0</span>
+    </button>
+    <button class="nav-item" data-view="cloud">
+      <span class="nav-mark">云</span>
+      <span class="nav-label">云上寻音</span>
+      <span class="nav-count" id="cntCloud">—</span>
+    </button>
+    <div class="nav-sep"></div>
+    <div class="nav-foot">
+      <p class="dir" id="dirInfo">F:\音乐</p>
+      <div class="foot-actions">
+        <button class="link-btn" id="btnRefresh">重扫曲库</button>
+        <span class="foot-sep">·</span>
+        <button class="link-btn" id="btnQuit">收卷</button>
+      </div>
+    </div>
+  </nav>
+
+  <section class="panel">
+    <div class="panel-head">
+      <div class="panel-title">
+        <h2 id="viewTitle">我的喜欢</h2>
+        <p id="viewSub">静候</p>
+      </div>
+      <div class="panel-tools">
+        <button class="tool-btn" id="btnPlayAll" title="从头播放当前列表">尽听</button>
+        <button class="tool-btn" id="btnShuffle" title="打乱后播放">乱序</button>
+      </div>
+    </div>
+
+    <div class="list-head">
+      <span class="c-no">序</span>
+      <span class="c-cov"></span>
+      <span class="c-title">曲名</span>
+      <span class="c-artist">歌者</span>
+      <span class="c-dur">时长</span>
+      <span class="c-act"></span>
+    </div>
+    <div class="list-wrap" id="listWrap">
+      <div class="list" id="list"></div>
+      <div class="empty" id="empty" hidden>
+        <div class="empty-ink"></div>
+        <p class="empty-v">此处<br>无曲</p>
+      </div>
+      <div class="loading" id="loading" hidden>
+        <div class="ripple"><i></i><i></i><i></i></div>
+        <p>寻音中⋯</p>
+      </div>
+    </div>
+  </section>
+
+  <aside class="lyric-pane" id="lyricPane">
+    <div class="lyric-head">
+      <span>词</span>
+      <button class="x-btn" id="btnLyricClose" title="收起">×</button>
+    </div>
+    <div class="lyric-body" id="lyricBody">
+      <p class="lyric-hint">静听</p>
+    </div>
+  </aside>
+</main>
+
+<!-- 全屏正在播放（网易云式词页） -->
+<div class="now-playing" id="nowPlaying">
+  <div class="np-veil"></div>
+  <button class="np-close" id="npClose" title="收起 (Esc)">×</button>
+  <div class="np-body">
+    <div class="np-left">
+      <div class="np-disc" id="npDisc">
+        <div class="np-ring"></div>
+        <div class="np-face" id="npCover">
+          <svg viewBox="0 0 64 64" class="disc-ph">
+            <path d="M44 14a20 20 0 1 0 0 36 17 17 0 0 1 0-36z" fill="currentColor" opacity=".5"/>
+          </svg>
+        </div>
+      </div>
+      <div class="np-meta">
+        <h3 id="npTitle">未择曲</h3>
+        <p id="npArtist">静候一曲</p>
+        <span class="np-badge" id="npBadge" hidden>—</span>
+      </div>
+    </div>
+    <div class="np-lyric" id="npLyric">
+      <p class="lyric-hint">静听</p>
+    </div>
+  </div>
+</div>
+
+<footer class="player">
+  <div class="p-left">
+    <div class="disc" id="disc">
+      <div class="disc-ring"></div>
+      <div class="disc-face" id="discFace">
+        <svg viewBox="0 0 64 64" class="disc-ph">
+          <path d="M44 14a20 20 0 1 0 0 36 17 17 0 0 1 0-36z" fill="currentColor" opacity=".5"/>
+        </svg>
+      </div>
+    </div>
+    <div class="meta">
+      <div class="p-title" id="pTitle">未择曲</div>
+      <div class="p-artist" id="pArtist">静候一曲</div>
+    </div>
+  </div>
+
+  <div class="p-center">
+    <div class="controls">
+      <button class="ctrl sm" id="btnMode" title="列表循环"></button>
+      <button class="ctrl" id="btnPrev" title="上一曲">
+        <svg viewBox="0 0 24 24"><path d="M18 5v14L8 12z" fill="currentColor" stroke="none"/><path d="M5 5v14"/></svg>
+      </button>
+      <button class="ctrl main" id="btnPlay" title="播放 / 暂停">
+        <svg viewBox="0 0 24 24" id="icoPlay"><path d="M7 4.5v15l13-7.5z" fill="currentColor" stroke="none"/></svg>
+      </button>
+      <button class="ctrl" id="btnNext" title="下一曲">
+        <svg viewBox="0 0 24 24"><path d="M6 5v14l10-7z" fill="currentColor" stroke="none"/><path d="M19 5v14"/></svg>
+      </button>
+    </div>
+    <div class="progress-row">
+      <span class="t" id="tCur">0:00</span>
+      <div class="bar" id="bar">
+        <div class="bar-line"><i class="fill" id="barFill"></i><b class="dot" id="barDot"></b></div>
+      </div>
+      <span class="t" id="tDur">0:00</span>
+    </div>
+  </div>
+
+  <div class="p-right">
+    <button class="immerse-btn" id="btnImmerse" title="收起界面，只看壁纸">
+      <svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+    </button>
+    <button class="fav-btn player-fav hide" id="btnFav" title="加入我的喜欢"></button>
+    <button class="lyric-toggle" id="btnLyric" title="词卷 (L)">词</button>
+    <span class="badge" id="qBadge" hidden>—</span>
+    <div class="vol">
+      <button class="ctrl sm" id="btnMute" title="静音">
+        <svg viewBox="0 0 24 24" class="i-vol"><path d="M4 9.5h3L12 5v14L7 14.5H4z" fill="currentColor" stroke="none"/><path d="M16 9.2a4.4 4.4 0 0 1 0 5.6M18.6 6.6a8 8 0 0 1 0 10.8"/></svg>
+      </button>
+      <div class="vbar" id="vbar"><div class="vfill" id="vfill"></div></div>
+    </div>
+  </div>
+</footer>
+
+<audio id="audio" preload="metadata"></audio>
+<div class="immerse-hint">点击任意处唤回界面</div>
+<div class="dir-modal" id="dirModal" hidden>
+  <div class="dir-card">
+    <h4>换一个音乐目录</h4>
+    <p class="dir-tip">填写本机存放音乐的文件夹路径，确定后会重新扫描。</p>
+    <input id="dirInput" type="text" spellcheck="false" autocomplete="off" placeholder="例如 D:\音乐">
+    <div class="dir-actions">
+      <button class="dir-btn ghost" id="dirCancel">取消</button>
+      <button class="dir-btn primary" id="dirOk">确定并重扫</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
