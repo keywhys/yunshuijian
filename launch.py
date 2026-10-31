@@ -29,8 +29,7 @@ if HERE not in sys.path:
 
 import app as backend  # noqa: E402
 
-PORT = 8791
-URL = f"http://127.0.0.1:{PORT}/"
+PORT = 8791  # 仅作兜底参考，实际端口由 ensure_server() 动态决定
 PROFILE = os.path.join(HERE, ".window-profile")
 EDGE_CANDIDATES = [
     r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
@@ -80,21 +79,77 @@ def focus_existing_window():
 
 
 # ---------------------------------------------------------------- 服务
+def _kill_zombies():
+    """清理占着候选端口、却不响应 /api/ping 的僵死服务。
+
+    只对 python / pythonw / 本程序进程下手，避免误杀别的软件。
+    """
+    try:
+        out = subprocess.run(["netstat", "-ano", "-p", "tcp"],
+                             capture_output=True, timeout=8)
+        text = out.stdout.decode("gbk", "replace")
+    except Exception:
+        return
+
+    pids = set()
+    for line in text.splitlines():
+        if "LISTENING" not in line.upper():
+            continue
+        for p in backend.PORT_CANDIDATES:
+            if ":%d " % p in line:
+                pids.add(line.split()[-1])
+                break
+    if not pids:
+        return
+
+    try:
+        out = subprocess.run(["tasklist", "/FO", "CSV", "/NH"],
+                             capture_output=True, timeout=8)
+        rows = out.stdout.decode("gbk", "replace").splitlines()
+    except Exception:
+        return
+
+    safe = {"python.exe", "pythonw.exe", "云水间听音.exe"}
+    for row in rows:
+        cols = [c.strip().strip('"') for c in row.split('","')]
+        if len(cols) < 2 or cols[1] not in pids:
+            continue
+        if cols[0].lower() in {n.lower() for n in safe}:
+            subprocess.run(["taskkill", "/F", "/PID", cols[1]], capture_output=True)
+            print(f"[清理] 已结束僵死服务 PID {cols[1]} ({cols[0]})")
+
+
 def ensure_server():
-    """返回 True 表示本进程启动了服务（需要负责关闭）"""
-    if backend.already_running(PORT):
-        return False
+    """返回 (端口, 是否本进程启动)。
+
+    端口为 None 表示彻底起不来。
+    """
+    # 1) 已有健康服务 → 直接复用
+    for p in backend.PORT_CANDIDATES:
+        if backend.already_running(p):
+            return p, False
+
+    # 2) 端口被占但不应答 = 僵尸，先清掉
+    _kill_zombies()
+
+    # 3) 逐个候选端口尝试监听
     backend.refresh_library(verbose=True)
     backend.patch_meta_bg()
-    httpd = backend.ThreadingHTTPServer(("127.0.0.1", PORT), backend.Handler)
-    httpd.daemon_threads = True
-    threading.Thread(target=httpd.serve_forever, daemon=True, name="httpd").start()
-    for _ in range(40):
-        if backend.already_running(PORT):
-            break
-        time.sleep(0.1)
-    print(f"[窗口] 服务就绪 {URL}")
-    return True
+    for p in backend.PORT_CANDIDATES:
+        try:
+            httpd = backend.ThreadingHTTPServer(("127.0.0.1", p), backend.Handler)
+        except OSError as e:
+            print(f"[窗口] 端口 {p} 不可用：{e}")
+            continue
+        httpd.daemon_threads = True
+        threading.Thread(target=httpd.serve_forever, daemon=True, name="httpd").start()
+        for _ in range(50):
+            if backend.already_running(p):
+                print(f"[窗口] 服务就绪 http://127.0.0.1:{p}/")
+                return p, True
+            time.sleep(0.1)
+        return p, True
+    return None, False
 
 
 def find_edge():
@@ -104,15 +159,15 @@ def find_edge():
     return None
 
 
-def spawn_window():
+def spawn_window(url):
     edge = find_edge()
     if not edge:
         import webbrowser
-        webbrowser.open(URL)
+        webbrowser.open(url)
         return False
     args = [
         edge,
-        f"--app={URL}",
+        f"--app={url}",
         "--window-size=1240,820",
         f"--user-data-dir={PROFILE}",
         "--no-first-run",
@@ -126,7 +181,7 @@ def spawn_window():
     except Exception as e:
         print(f"[窗口] 启动失败：{e}")
         import webbrowser
-        webbrowser.open(URL)
+        webbrowser.open(url)
         return False
 
 
@@ -138,7 +193,7 @@ def wait_window_appear(timeout=18):
     return False
 
 
-def wait_window_gone():
+def wait_window_gone(port):
     """窗口连续 3 次检测不到才认为关闭（避免标题瞬时变化误判）"""
     miss = 0
     while True:
@@ -149,29 +204,34 @@ def wait_window_gone():
         miss += 1
         if miss >= 3:
             return
-        if not backend.already_running(PORT):
+        if not backend.already_running(port):
             return
 
 
 def main():
-    # 服务已经在别处跑着：只管把窗口叫出来，本进程可以安全退出
-    if backend.already_running(PORT):
+    port, own = ensure_server()
+    if port is None:
+        print("[错误] 所有候选端口都不可用")
+        return
+
+    url = f"http://127.0.0.1:{port}/"
+
+    # 服务在别处跑着：只管把窗口叫出来，本进程可以安全退出
+    if not own:
         if not focus_existing_window():
-            spawn_window()
+            spawn_window(url)
         return
 
     # 本进程负责起服务 —— 那就必须由本进程保活到窗口关闭。
     # 绝不能在这里 return，否则服务线程随进程一起消失，
     # 窗口还开着但所有请求都没响应（表现为搜索失灵、收藏不刷新）。
-    ensure_server()
-
     if not focus_existing_window():
-        spawn_window()
+        spawn_window(url)
 
     if not wait_window_appear():
         print("[窗口] 未检测到窗口，保持服务运行")
 
-    wait_window_gone()
+    wait_window_gone(port)
     print("[窗口] 已关闭")
     os._exit(0)
 

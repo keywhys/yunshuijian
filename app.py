@@ -1282,15 +1282,21 @@ class Handler(BaseHTTPRequestHandler):
 
 # ---------------------------------------------------------------- 启动
 def already_running(port):
-    s = socket.socket()
-    s.settimeout(0.4)
+    """真实探活：必须 /api/ping 返回 200 才算活着。
+
+    只做 TCP connect 是不够的 —— 僵死进程的内核 listen 队列照样能接受
+    连接，于是被误判成"服务健康"，启动器就会跳过启动自己的服务，
+    窗口打开后所有请求都没人应答（表现为打不开 / 一直转圈）。
+    """
     try:
-        s.connect(("127.0.0.1", port))
-        return True
+        req = urllib.request.Request(
+            "http://127.0.0.1:%d/api/ping" % port,
+            headers={"Connection": "close"},
+        )
+        with urllib.request.urlopen(req, timeout=1.5) as r:
+            return r.status == 200
     except Exception:
         return False
-    finally:
-        s.close()
 
 
 def open_browser(url):
