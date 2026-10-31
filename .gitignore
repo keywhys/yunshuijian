@@ -24,10 +24,12 @@ selftest.log
 _tp*/
 _edgeprof/
 
-# 壁纸（AI 生成，含角色形象，不入库；界面有渐变兜底）
-static/wallpaper.png
-
 # 系统
 Thumbs.db
 .DS_Store
 desktop.ini
+
+# 本地预览临时文件
+_preview.py
+_preview.html
+_pv.png

@@ -4,8 +4,6 @@
 
 ![界面预览](static/界面预览.png)
 
-<sub>截图为个人使用效果，其中的背景壁纸为 AI 生成示意，仓库不含该图（见 .gitignore）。clone 后默认是深蓝渐变背景，可自行放一张 `static/wallpaper.png`。</sub>
-
 ---
 
 ## 这是什么
@@ -51,6 +49,10 @@ python launch.py
 
 配置保存在 `%APPDATA%\云水间听音\config.json`。
 
+## 更换壁纸
+
+把自己的图片放到 `static/wallpaper.png` 覆盖即可，建议 16:9 横图、1280×720 以上。删掉这张图也能跑，界面会自动换成深蓝渐变底。
+
 ## 快捷键
 
 | 键 | 作用 |
@@ -82,7 +84,6 @@ static/     前端：index.html / style.css / app.js（无框架、无构建）
 
 - **音源来自第三方公开聚合接口**（`music-api.gdstudio.xyz`），非官方 API。接口失效时云端功能不可用，需要更换 `app.py` 里的 `API_BASE`。
 - 本地曲目找词依赖标题匹配，冷门曲目可能无词。
-- 壁纸不入库（见 `.gitignore`），clone 后是深蓝渐变背景，可自行放一张 `static/wallpaper.png`。
 
 ## 免责声明
 
