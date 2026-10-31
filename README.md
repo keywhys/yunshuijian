@@ -2,6 +2,8 @@
 
 > 一个本地曲库 + 云端音源双模式的桌面音乐播放器。零第三方依赖的 Python 后端，毛玻璃界面，独立窗口运行。
 
+**[⬇ 下载 Windows 版](https://github.com/keywhys/yunshuijian/releases/latest)** &nbsp;·&nbsp; 解压即用，无需安装 Python（需要系统 Edge，Win10/11 自带）
+
 ![界面预览](static/界面预览.png)
 
 ---
