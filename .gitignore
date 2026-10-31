@@ -1,0 +1,33 @@
+# 打包产物
+build/
+dist/
+*.spec
+
+# 本地环境
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+
+# 运行时数据（含个人听歌记录，绝不提交）
+covers/
+cache_library.json
+cache_meta.json
+favorites.json
+config.json
+favdebug.log
+run.log
+selftest.log
+
+# Edge 应用窗口配置 / 调试残留
+.window-profile/
+_tp*/
+_edgeprof/
+
+# 壁纸（AI 生成，含角色形象，不入库；界面有渐变兜底）
+static/wallpaper.png
+
+# 系统
+Thumbs.db
+.DS_Store
+desktop.ini
